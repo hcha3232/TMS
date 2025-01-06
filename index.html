@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TMS Log</title>
+    <style>
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .log-output {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>TMS Log</h1>
+    <form id="data-entry-form">
+        <label for="clinician-id">Clinician ID:</label>
+        <input type="text" id="clinician-id" required>
+        <br><br>
+
+        <label for="observation-id">Observation ID:</label>
+        <input type="text" id="observation-id" required>
+        <br><br>
+
+        <label for="spde-status">SPDE Status:</label>
+        <button type="button" id="spde-with-btn">With SPDE</button>
+        <button type="button" id="spde-without-btn">Without SPDE</button>
+        <input type="hidden" id="spde-status" value="">
+        <br><br>
+
+        <label for="date">Date:</label>
+        <input type="text" id="date" value="" readonly>
+        <br><br>
+
+        <label for="time">Time:</label>
+        <input type="text" id="time" value="" readonly>
+        <br><br>
+
+        <div>
+            <p>Computer Writing</p>
+            <button type="button" class="start-btn" data-category="Computer Writing">Start</button>
+            <button type="button" class="finish-btn" data-category="Computer Writing" disabled>Finish</button>
+        </div>
+
+        <div>
+            <p>Screen Switching/Patient Search</p>
+            <button type="button" class="start-btn" data-category="Screen Switching/Patient Search">Start</button>
+            <button type="button" class="finish-btn" data-category="Screen Switching/Patient Search" disabled>Finish</button>
+        </div>
+
+        <div>
+            <p>Registry Entering</p>
+            <button type="button" class="start-btn" data-category="Registry Entering">Start</button>
+            <button type="button" class="finish-btn" data-category="Registry Entering" disabled>Finish</button>
+        </div>
+
+        <div>
+            <p>Computer Reading</p>
+            <button type="button" class="start-btn" data-category="Computer Reading">Start</button>
+            <button type="button" class="finish-btn" data-category="Computer Reading" disabled>Finish</button>
+        </div>
+
+        <br>
+        <button type="button" id="submit-btn">Submit</button>
+    </form>
+
+    <div id="output" class="log-output"></div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const dateInput = document.getElementById("date");
+            const timeInput = document.getElementById("time");
+            const submitButton = document.getElementById("submit-btn");
+            const outputDiv = document.getElementById("output");
+            const spdeStatusInput = document.getElementById("spde-status");
+
+
+            document.getElementById("spde-with-btn").addEventListener("click", () => {
+                spdeStatusInput.value = "With SPDE";
+                document.getElementById("spde-with-btn").disabled = true;
+                document.getElementById("spde-without-btn").disabled = false;
+            });
+
+            document.getElementById("spde-without-btn").addEventListener("click", () => {
+                spdeStatusInput.value = "Without SPDE";
+                document.getElementById("spde-without-btn").disabled = true;
+                document.getElementById("spde-with-btn").disabled = false;
+            });
+
+
+            const updateTime = () => {
+                const now = new Date();
+                dateInput.value = now.toISOString().split("T")[0];
+                timeInput.value = now.toTimeString().split(" ")[0];
+            };
+
+            updateTime();
+            setInterval(updateTime, 1000);
+
+            const buttons = document.querySelectorAll("button");
+            const startButtons = document.querySelectorAll(".start-btn");
+            const finishButtons = document.querySelectorAll(".finish-btn");
+
+            startButtons.forEach((startBtn) => {
+                startBtn.addEventListener("click", () => {
+                    startButtons.forEach((btn) => btn.disabled = true);
+                    finishButtons.forEach((btn) => btn.disabled = true);
+
+                    const category = startBtn.dataset.category;
+                    const time = new Date().toTimeString().split(" ")[0];
+
+                    logAction(category, "Start", time);
+                    startBtn.nextElementSibling.disabled = false; // Enable finish button for this category
+                });
+            });
+
+            finishButtons.forEach((finishBtn) => {
+                finishBtn.addEventListener("click", () => {
+                    const category = finishBtn.dataset.category;
+                    const time = new Date().toTimeString().split(" ")[0];
+
+                    logAction(category, "Finish", time);
+                    startButtons.forEach((btn) => btn.disabled = false); // Enable all start buttons
+                    finishButtons.forEach((btn) => btn.disabled = true); // Disable all finish buttons
+                });
+            });
+
+            submitButton.addEventListener("click", () => {
+                const clinicianId = document.getElementById("clinician-id").value;
+                const observationId = document.getElementById("observation-id").value;
+                const date = dateInput.value;
+                const spdeStatus = spdeStatusInput.value;
+
+                if (!clinicianId || !observationId || !spdeStatus) {
+                    alert("Please enter Clinician or Observation ID or SPDE status.");
+                    return;
+                }
+
+                const logs = JSON.parse(localStorage.getItem("logs")) || [];
+                let result = `<h2>Submission Results</h2>
+                              <p><strong>Clinician ID:</strong> ${clinicianId}</p>
+                              <p><strong>Clinician ID:</strong> ${observationId}</p>
+                              <p><strong>Date:</strong> ${date}</p>
+                              <p><strong>SPDE Status:</strong> ${spdeStatus}</p>
+                              <h3>Logs</h3>`;
+
+                logs.forEach(log => {
+                    result += `<p>Category: ${log.category}, Action: ${log.action}, Time: ${log.time}</p>`;
+                });
+
+                outputDiv.innerHTML = result;
+                localStorage.clear();
+            });
+
+            const logAction = (category, action, time) => {
+                const logs = JSON.parse(localStorage.getItem("logs")) || [];
+                logs.push({ category, action, time });
+                localStorage.setItem("logs", JSON.stringify(logs));
+            };
+        });
+    </script>
+</body>
+</html>
